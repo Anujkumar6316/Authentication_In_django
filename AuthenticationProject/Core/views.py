@@ -24,6 +24,10 @@ def loginView(request):
         
     return render(request, 'login.html')
 
+def logoutView(request):
+    logout(request)
+    return redirect('login')
+
 def registerView(request):
     if request.method == 'POST':
 

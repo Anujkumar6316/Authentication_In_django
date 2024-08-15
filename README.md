@@ -223,3 +223,13 @@ This LOGIN_URL redirect the user, where login is required to the login page
 - Test if user can login.
 
 ### **5. Logout Users Feature**
+- create logout view.
+```py
+def logoutView(request):
+    logout(request)
+    return redirect('login')
+```
+- Create logout url.```path('logout/', views.logoutView, name='logout'), ```
+- Test the code.
+
+### **6. Forgot Password Model & Views**
