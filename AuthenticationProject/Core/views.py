@@ -1,8 +1,12 @@
+from django.core.mail import EmailMessage
+from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib import messages # for showing some info
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from .models import passwordReset
+from django.urls import reverse
 
 # Create your views here.
 @login_required
@@ -15,6 +19,7 @@ def loginView(request):
         password = request.POST.get('password')
 
         user = authenticate(request=request, username=username, password=password)
+
         if user is not None:
             login(request, user)
             return redirect('home')
@@ -72,6 +77,36 @@ def registerView(request):
     return render(request, 'register.html')
 
 def forgotPassword(request):
+    if request.method == "POST":
+        email = request.POST.get('email')
+
+        try:
+            user = User.objects.get(email=email)
+
+            new_reset_password = passwordReset(user=user)
+            new_reset_password.save()
+
+            password_reset_url = reverse('reset_password', kwargs={'reset_id': new_reset_password.reset_id})
+
+            # email content
+            email_body = f'Reset your password using the link below:\n\n\n{password_reset_url}'
+
+            email_message = EmailMessage(
+                'Reset your password', # email subject
+                email_body, # email body
+                settings.EMAIL_HOST_USER, #sender
+                [email] # reciever
+            )
+
+            email_message.fail_silently = True
+            email_message.send()
+
+            return redirect('password_reset_sent', reset_id = new_reset_password.reset_id)
+        
+        except User.DoesNotExist:
+            messages.error(request, f'No user with email "{email}" found.')
+            return redirect('forgot_password')
+         
     return render(request, 'forgot_password.html')
 
 def passwordResetSent(request):
