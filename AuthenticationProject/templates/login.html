@@ -1,35 +1,48 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-  <head>
+
+<head>
     <meta charset="utf-8">
     <title>Login</title>
     <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
+</head>
+
+<body>
     <div class="center">
-      <h1>Login</h1>
-        
-      <form method="POST">
+        <h1>Login</h1>
 
-        <div class="txt_field">
-          <input type="text" required>
-          <span></span>
-          <label>Username</label>
-        </div>
+        {% if messages %}
+            {% for message in messages %}
+                {% if message.tags == 'error' %}
+                    <center><h4 style="color: firebrick;">{{message}}</h4></center>
+                {% else %}
+                    <center><h4 style="color: dodgerblue;">{{message}}</h4></center>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
 
-        <div class="txt_field">
-          <input type="password" required>
-          <span></span>
-          <label>Password</label>
-        </div>
+        <form method="POST">
 
-        <input type="submit" value="Login">
-        <div class="signup_link">
-          Not a member? <a href="register.html">Signup</a>
-          <p>Forgot your Password? <a href="#">Reset Password</a></p> 
-        </div>
-      </form>
+            <div class="txt_field">
+                <input type="text" required>
+                <span></span>
+                <label>Username</label>
+            </div>
+
+            <div class="txt_field">
+                <input type="password" required>
+                <span></span>
+                <label>Password</label>
+            </div>
+
+            <input type="submit" value="Login">
+            <div class="signup_link">
+                Not a member? <a href="register.html">Signup</a>
+                <p>Forgot your Password? <a href="#">Reset Password</a></p>
+            </div>
+        </form>
     </div>
 
-  </body>
+</body>
+
 </html>
