@@ -70,3 +70,12 @@ def registerView(request):
         else:
             return redirect('register')
     return render(request, 'register.html')
+
+def forgotPassword(request):
+    return render(request, 'forgot_password.html')
+
+def passwordResetSent(request):
+    return render(request, 'password_reset_sent.html')
+
+def resetPassword(request):
+    return render(request, 'reset_password.html')
