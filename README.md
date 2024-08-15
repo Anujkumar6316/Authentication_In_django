@@ -184,3 +184,42 @@ if request.method == 'POST':
 - Test the code to check if users can now register.
 
 ### **4. Login User Feature**
+- Again add name attribute, csrf_token and add register url
+- add static file 
+- In ```loginView``` view check for incoming form submission and grab user data
+```py
+if request.method == 'POST':
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+```
+
+- Authenticate the user details
+```py
+user = authenticate(request=request, username=username, password=password)
+if user is not None:
+    login(request, user)
+    return redirect('home')
+else:
+    messages.error(request, 'Invalid username or password')
+    return redirect('login')
+```
+
+- Restrict access to home page to authenticated users
+```py
+@login_required
+def home(request):
+    pass
+```
+
+- Set ```LOGIN_URL``` in ```settings.py``` file.
+```py
+# where authenticated user gets redirected to when they try to access a loing required view.
+LOGIN_URL = 'login'
+```
+**NOTE**<HR>
+This LOGIN_URL redirect the user, where login is required to the login page
+<hr>
+
+- Test if user can login.
+
+### **5. Logout Users Feature**
