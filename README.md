@@ -233,3 +233,147 @@ def logoutView(request):
 - Test the code.
 
 ### **6. Forgot Password Model & Views**
+- Create the views for ```forgotPassword```, ```passwordResetSent```, and ```resetPassword```.
+```py
+def forgotPassword(request):
+    return render(request, 'forgot_password.html')
+
+def passwordResetSent(request, reset_id):
+    return render(request, 'password_reset_sent.html')
+
+def resetPassword(request, reset_id):
+    return render(request, 'reset_password.html')
+```
+
+- Again add static files, csrf_token, url.
+- Add urls path for the given views.
+```py
+path('forget-password/', views.forgotPassword, name='forget_password'),
+path('password-reset-sent/<str:reset_id>/', views.passwordResetSent, name='password_reset_sent'),
+path('reset-password/<str:reset_id>/', views.resetPassword, name='reset_password'),
+```
+- Create the model for the password reset.
+```py
+from django.db import models
+from django.contrib.auth.models import User
+import uuid
+
+# Create your models here.
+class passwordReset(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    reset_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Password reset for {self.user.username} at {self.created_at}'
+```
+
+- Make migrations
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+- add this model to admin 
+```py 
+from django.contrib import admin
+from .models import passwordReset
+
+# Register your models here.
+admin.site.register(passwordReset)
+```
+
+### **7. Forgot Password Feature**
+- Again repeat the process add name attribute, csrf_token and change url.
+- And in the ```forgotPassword``` view collect the user data.
+```py
+if request.method == "POST":
+    email = request.POST.get('email')
+```
+- Check if email is already exists or not.
+- if email exist the send the email to registed email id with the reset url.
+```py
+def forgotPassword(request):
+    if request.method == "POST":
+        email = request.POST.get('email')
+
+        try:
+            user = User.objects.get(email=email)
+
+            new_reset_password = passwordReset(user=user)
+            new_reset_password.save()
+
+            password_reset_url = reverse('reset_password', kwargs={'reset_id': new_reset_password.reset_id})
+
+            # email content
+            email_body = f'Reset your password using the link below:\n\n\n{password_reset_url}'
+
+            email_message = EmailMessage(
+                'Reset your password', # email subject
+                email_body, # email body
+                settings.EMAIL_HOST_USER, #sender
+                [email] # reciever
+            )
+
+            email_message.fail_silently = True
+            email_message.send()
+
+            return redirect('password_reset_sent', reset_id = new_reset_password.reset_id)
+        
+        except User.DoesNotExist:
+            messages.error(request, f'No user with email "{email}" found.')
+            return redirect('forgot_password')
+         
+    return render(request, 'forgot_password.html')
+```
+- else show the error message.
+- Setup email settings so we can send password reset email in ```settings.py```.
+```py
+# setup email
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_HOST_USER = 'anujkumar63166316@gmail.com'
+EMAIL_HOST_PASSWORD = 'grzn tgge ejnc vvte'
+```
+
+### **8. Password Reset Sent View:**
+- Get reset_id and make sure that it is valid
+```py
+def passwordResetSent(request, reset_id):
+    if passwordReset.objects.filter(reset_id=reset_id).exists():
+        return render(request, 'password_reset_sent.html')
+    else:
+        # redirect to forgot password page if code does not exists
+        messages.error(request, 'Invalid reset id')
+        return redirect('forgot_password')
+```
+
+### **9. Password Reset View:**
+- Head to the ```reset_password.html``` file and make sure that we add the name attributes and csrf_token.
+- Get the reset_id and make sure that it is valid.
+- Get the password from form submit.
+```py
+if request.method == 'POST':
+    password1 = request.POST.get('password1')
+    password2 = request.POST.get('password2')
+```
+- varify passwords and reset link.
+```py
+passwords_have_error = False
+
+if password1 != password2:
+    passwords_have_error=True
+    messages.error(request, 'Passwords does not match')
+        
+if len(password1) < 5:
+    passwords_have_error=True
+    messages.error(request, 'Password must be atleast 5 char long')
+
+# check if link is not expired
+expiration_time = reset_id.created_at + timezone.timedelta(minutes=10)
+    
+if timezone.now()>expiration_time:
+    passwords_have_error=True
+    messages.error(request, 'Reset link has expired')
+```
