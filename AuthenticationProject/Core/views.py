@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from .models import passwordReset
 from django.urls import reverse
+from django.utils import timezone
 
 # Create your views here.
 @login_required
@@ -87,7 +88,7 @@ def forgotPassword(request):
             new_reset_password.save()
 
             password_reset_url = reverse('reset_password', kwargs={'reset_id': new_reset_password.reset_id})
-
+            full_password_reset_url = f'{request.scheme()}://{request.get_host()}{password_reset_url}'
             # email content
             email_body = f'Reset your password using the link below:\n\n\n{password_reset_url}'
 
@@ -109,8 +110,60 @@ def forgotPassword(request):
          
     return render(request, 'forgot_password.html')
 
-def passwordResetSent(request):
-    return render(request, 'password_reset_sent.html')
+def passwordResetSent(request, reset_id):
+    if passwordReset.objects.filter(reset_id=reset_id).exists():
+        return render(request, 'password_reset_sent.html')
+    else:
+        # redirect to forgot password page if code does not exists
+        messages.error(request, 'Invalid reset id')
+        return redirect('forgot_password')
 
-def resetPassword(request):
+def resetPassword(request, reset_id):
+    try:
+        pass_reset_id = passwordReset.objects.get(reset_id=reset_id)
+    
+        if request.method == 'POST':
+            password1 = request.POST.get('password1')
+            password2 = request.POST.get('password2')
+
+        passwords_have_error = False
+
+        if password1 != password2:
+            passwords_have_error=True
+            messages.error(request, 'Passwords does not match')
+        
+        if len(password1) < 5:
+            passwords_have_error=True
+            messages.error(request, 'Password must be atleast 5 char long')
+
+        # check if link is not expired
+        expiration_time = pass_reset_id.created_at + timezone.timedelta(minutes=10)
+
+        if timezone.now()>expiration_time:
+            passwords_have_error=True
+            messages.error(request, 'Reset link has expired')
+            pass_reset_id.delete()
+
+        # reset password
+        if not passwords_have_error:
+            user=pass_reset_id.user
+            user.set_password(password1)
+            user.save()
+
+            # delete reset id after use
+            pass_reset_id.delete()
+
+            # redirect to login
+            messages.success(request, 'Password reset. Proceed to login')
+            return redirect('login')
+        
+        else:
+            # redirect back to the password reset page and display errors
+            return redirect('reset_password', reset_id=reset_id) 
+    except passwordReset.DoesNotExist:
+        # redirect to forgot password page 
+        messages.error(request, 'Invalid reset id')
+        return redirect('forgot_password')
+    
     return render(request, 'reset_password.html')
+
